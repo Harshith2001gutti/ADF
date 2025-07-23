@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Action Item Tracker{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-tachometer-alt me-2"></i>Dashboard</h1>
+    <a href="{{ url_for('create_action_item') }}" class="btn btn-primary">
+        <i class="fas fa-plus me-2"></i>Create New Item
+    </a>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5 class="card-title">My Items</h5>
+                        <h2>{{ my_items|length }}</h2>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-user-check fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5 class="card-title">Created by Me</h5>
+                        <h2>{{ created_items|length }}</h2>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-plus-circle fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5 class="card-title">Total Items</h5>
+                        <h2>{{ all_items|length }}</h2>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-list fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5 class="card-title">Completed</h5>
+                        <h2>{{ all_items|selectattr("status", "equalto", "Completed")|list|length }}</h2>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-check-circle fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- My Action Items -->
+<div class="row">
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-user-check me-2"></i>Items Assigned to Me
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if my_items %}
+                    <div class="list-group list-group-flush">
+                        {% for item in my_items %}
+                        <div class="list-group-item d-flex justify-content-between align-items-start">
+                            <div class="ms-2 me-auto">
+                                <div class="fw-bold">{{ item.title }}</div>
+                                <small class="text-muted">
+                                    Due: {{ item.due_date.strftime('%Y-%m-%d') if item.due_date else 'No due date' }}
+                                </small>
+                            </div>
+                            <span class="badge bg-{{ 'success' if item.status == 'Completed' else 'warning' if item.status == 'In Progress' else 'secondary' }} rounded-pill">
+                                {{ item.status }}
+                            </span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted text-center">No items assigned to you yet.</p>
+                {% endif %}
+            </div>
+            {% if my_items %}
+            <div class="card-footer text-center">
+                <a href="{{ url_for('action_items') }}" class="btn btn-outline-primary btn-sm">View All</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-plus-circle me-2"></i>Items Created by Me
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if created_items %}
+                    <div class="list-group list-group-flush">
+                        {% for item in created_items %}
+                        <div class="list-group-item d-flex justify-content-between align-items-start">
+                            <div class="ms-2 me-auto">
+                                <div class="fw-bold">{{ item.title }}</div>
+                                <small class="text-muted">
+                                    Assigned to: {{ item.assigned_user.username if item.assigned_user else 'Unassigned' }}
+                                </small>
+                            </div>
+                            <span class="badge bg-{{ 'danger' if item.priority == 'Critical' else 'warning' if item.priority == 'High' else 'info' if item.priority == 'Medium' else 'secondary' }} rounded-pill">
+                                {{ item.priority }}
+                            </span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted text-center">You haven't created any items yet.</p>
+                {% endif %}
+            </div>
+            {% if created_items %}
+            <div class="card-footer text-center">
+                <a href="{{ url_for('action_items') }}" class="btn btn-outline-primary btn-sm">Manage All</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            <i class="fas fa-clock me-2"></i>Recent Activity
+        </h5>
+    </div>
+    <div class="card-body">
+        {% set recent_items = all_items|sort(attribute='updated_at', reverse=true)[:5] %}
+        {% if recent_items %}
+            <div class="table-responsive">
+                <table class="table table-sm table-hover">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Status</th>
+                            <th>Priority</th>
+                            <th>Assigned To</th>
+                            <th>Last Updated</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in recent_items %}
+                        <tr>
+                            <td>{{ item.title }}</td>
+                            <td>
+                                <span class="badge bg-{{ 'success' if item.status == 'Completed' else 'warning' if item.status == 'In Progress' else 'secondary' }}">
+                                    {{ item.status }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-{{ 'danger' if item.priority == 'Critical' else 'warning' if item.priority == 'High' else 'info' if item.priority == 'Medium' else 'secondary' }}">
+                                    {{ item.priority }}
+                                </span>
+                            </td>
+                            <td>{{ item.assigned_user.username if item.assigned_user else 'Unassigned' }}</td>
+                            <td>{{ item.updated_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="text-muted text-center">No activity yet.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
