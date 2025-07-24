@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Action Item - Action Item Tracker{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card shadow">
+            <div class="card-header">
+                <h3 class="card-title mb-0">
+                    <i class="fas fa-edit me-2"></i>Edit Action Item
+                </h3>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="title" class="form-label">Title <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="title" name="title" value="{{ item.title }}" required maxlength="200">
+                        <div class="form-text">Brief description of the action item</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="4" placeholder="Detailed description of the action item...">{{ item.description or '' }}</textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="status" class="form-label">Status <span class="text-danger">*</span></label>
+                                <select class="form-select" id="status" name="status" required>
+                                    <option value="Open" {{ 'selected' if item.status == 'Open' else '' }}>Open</option>
+                                    <option value="In Progress" {{ 'selected' if item.status == 'In Progress' else '' }}>In Progress</option>
+                                    <option value="Completed" {{ 'selected' if item.status == 'Completed' else '' }}>Completed</option>
+                                    <option value="Cancelled" {{ 'selected' if item.status == 'Cancelled' else '' }}>Cancelled</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="priority" class="form-label">Priority <span class="text-danger">*</span></label>
+                                <select class="form-select" id="priority" name="priority" required>
+                                    <option value="Low" {{ 'selected' if item.priority == 'Low' else '' }}>Low</option>
+                                    <option value="Medium" {{ 'selected' if item.priority == 'Medium' else '' }}>Medium</option>
+                                    <option value="High" {{ 'selected' if item.priority == 'High' else '' }}>High</option>
+                                    <option value="Critical" {{ 'selected' if item.priority == 'Critical' else '' }}>Critical</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="assigned_to" class="form-label">Assign To</label>
+                        <select class="form-select" id="assigned_to" name="assigned_to">
+                            <option value="">Select a user (optional)</option>
+                            {% for user in users %}
+                            <option value="{{ user.id }}" {{ 'selected' if item.assigned_to == user.id else '' }}>
+                                {{ user.first_name }} {{ user.last_name }} (@{{ user.username }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="due_date" class="form-label">Due Date</label>
+                        <input type="date" class="form-control" id="due_date" name="due_date" 
+                               value="{{ item.due_date.strftime('%Y-%m-%d') if item.due_date else '' }}">
+                        <div class="form-text">Optional deadline for this action item</div>
+                    </div>
+                    
+                    <!-- Item Information -->
+                    <div class="mb-3">
+                        <div class="border rounded p-3 bg-light">
+                            <h6>Item Information</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <small class="text-muted">Created by:</small><br>
+                                    <strong>{{ item.creator.first_name }} {{ item.creator.last_name }}</strong>
+                                    <small class="text-muted">(@{{ item.creator.username }})</small>
+                                </div>
+                                <div class="col-md-6">
+                                    <small class="text-muted">Created on:</small><br>
+                                    <strong>{{ item.created_at.strftime('%Y-%m-%d %H:%M') }}</strong>
+                                </div>
+                            </div>
+                            {% if item.updated_at != item.created_at %}
+                            <div class="row mt-2">
+                                <div class="col-md-6">
+                                    <small class="text-muted">Last updated:</small><br>
+                                    <strong>{{ item.updated_at.strftime('%Y-%m-%d %H:%M') }}</strong>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('action_items') }}" class="btn btn-secondary me-md-2">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Update Action Item
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Set minimum date to today for future dates only
+    const dueDateInput = document.getElementById('due_date');
+    const today = new Date().toISOString().split('T')[0];
+    // Don't set min date to allow editing of overdue items
+    
+    // Form validation
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+        const title = document.getElementById('title').value.trim();
+        if (!title) {
+            e.preventDefault();
+            alert('Please enter a title for the action item.');
+            document.getElementById('title').focus();
+            return false;
+        }
+    });
+    
+    // Status change confirmation for completed items
+    const statusSelect = document.getElementById('status');
+    statusSelect.addEventListener('change', function() {
+        if (this.value === 'Completed') {
+            const confirmed = confirm('Are you sure you want to mark this item as completed?');
+            if (!confirmed) {
+                // Reset to previous value
+                this.value = '{{ item.status }}';
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

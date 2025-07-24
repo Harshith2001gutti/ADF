@@ -1,0 +1,255 @@
+{% extends "base.html" %}
+
+{% block title %}Action Items - Action Item Tracker{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-list me-2"></i>Action Items</h1>
+    <a href="{{ url_for('create_action_item') }}" class="btn btn-primary">
+        <i class="fas fa-plus me-2"></i>Create New Item
+    </a>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <h5 class="card-title">
+            <i class="fas fa-filter me-2"></i>Filters
+        </h5>
+        <div class="row">
+            <div class="col-md-3">
+                <select class="form-select" id="statusFilter">
+                    <option value="">All Statuses</option>
+                    <option value="Open">Open</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Cancelled">Cancelled</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" id="priorityFilter">
+                    <option value="">All Priorities</option>
+                    <option value="Low">Low</option>
+                    <option value="Medium">Medium</option>
+                    <option value="High">High</option>
+                    <option value="Critical">Critical</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" id="assigneeFilter">
+                    <option value="">All Assignees</option>
+                    {% for user in users %}
+                    <option value="{{ user.username }}">{{ user.first_name }} {{ user.last_name }}</option>
+                    {% endfor %}
+                    <option value="unassigned">Unassigned</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <input type="text" class="form-control" id="searchFilter" placeholder="Search titles...">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Action Items Table -->
+<div class="card">
+    <div class="card-body">
+        {% if items %}
+        <div class="table-responsive">
+            <table class="table table-hover" id="actionItemsTable">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Title</th>
+                        <th>Description</th>
+                        <th>Status</th>
+                        <th>Priority</th>
+                        <th>Assigned To</th>
+                        <th>Created By</th>
+                        <th>Due Date</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                    <tr>
+                        <td class="fw-bold">{{ item.title }}</td>
+                        <td>
+                            {% if item.description %}
+                                {{ item.description[:50] }}{% if item.description|length > 50 %}...{% endif %}
+                            {% else %}
+                                <em class="text-muted">No description</em>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-{{ 'success' if item.status == 'Completed' else 'warning' if item.status == 'In Progress' else 'danger' if item.status == 'Cancelled' else 'secondary' }}">
+                                {{ item.status }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge bg-{{ 'danger' if item.priority == 'Critical' else 'warning' if item.priority == 'High' else 'info' if item.priority == 'Medium' else 'secondary' }}">
+                                {{ item.priority }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if item.assigned_user %}
+                                {{ item.assigned_user.first_name }} {{ item.assigned_user.last_name }}
+                                <br><small class="text-muted">@{{ item.assigned_user.username }}</small>
+                            {% else %}
+                                <em class="text-muted">Unassigned</em>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {{ item.creator.first_name }} {{ item.creator.last_name }}
+                            <br><small class="text-muted">@{{ item.creator.username }}</small>
+                        </td>
+                        <td>
+                            {% if item.due_date %}
+                                {{ item.due_date.strftime('%Y-%m-%d') }}
+                                {% set days_until_due = (item.due_date - today).days if today else None %}
+                                {% if days_until_due is not none %}
+                                    {% if days_until_due < 0 %}
+                                        <br><small class="text-danger">{{ -days_until_due }} days overdue</small>
+                                    {% elif days_until_due == 0 %}
+                                        <br><small class="text-warning">Due today</small>
+                                    {% elif days_until_due <= 3 %}
+                                        <br><small class="text-warning">Due in {{ days_until_due }} days</small>
+                                    {% endif %}
+                                {% endif %}
+                            {% else %}
+                                <em class="text-muted">No due date</em>
+                            {% endif %}
+                        </td>
+                        <td>{{ item.created_at.strftime('%Y-%m-%d') }}</td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <a href="{{ url_for('edit_action_item', id=item.id) }}" 
+                                   class="btn btn-outline-primary btn-sm" 
+                                   title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <button type="button" 
+                                        class="btn btn-outline-danger btn-sm" 
+                                        onclick="confirmDelete({{ item.id }}, '{{ item.title }}')"
+                                        title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-tasks fa-3x text-muted mb-3"></i>
+            <h4>No Action Items Yet</h4>
+            <p class="text-muted">Create your first action item to get started.</p>
+            <a href="{{ url_for('create_action_item') }}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Create Action Item
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the action item:</p>
+                <p class="fw-bold" id="deleteItemTitle"></p>
+                <p class="text-muted">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-2"></i>Delete
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Filter functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const statusFilter = document.getElementById('statusFilter');
+    const priorityFilter = document.getElementById('priorityFilter');
+    const assigneeFilter = document.getElementById('assigneeFilter');
+    const searchFilter = document.getElementById('searchFilter');
+    const table = document.getElementById('actionItemsTable');
+    
+    function filterTable() {
+        if (!table) return;
+        
+        const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+        const statusValue = statusFilter.value.toLowerCase();
+        const priorityValue = priorityFilter.value.toLowerCase();
+        const assigneeValue = assigneeFilter.value.toLowerCase();
+        const searchValue = searchFilter.value.toLowerCase();
+        
+        for (let row of rows) {
+            const cells = row.getElementsByTagName('td');
+            if (cells.length === 0) continue;
+            
+            const title = cells[0].textContent.toLowerCase();
+            const status = cells[2].textContent.toLowerCase();
+            const priority = cells[3].textContent.toLowerCase();
+            const assignee = cells[4].textContent.toLowerCase();
+            
+            let showRow = true;
+            
+            // Status filter
+            if (statusValue && !status.includes(statusValue)) {
+                showRow = false;
+            }
+            
+            // Priority filter
+            if (priorityValue && !priority.includes(priorityValue)) {
+                showRow = false;
+            }
+            
+            // Assignee filter
+            if (assigneeValue) {
+                if (assigneeValue === 'unassigned' && !assignee.includes('unassigned')) {
+                    showRow = false;
+                } else if (assigneeValue !== 'unassigned' && !assignee.includes(assigneeValue)) {
+                    showRow = false;
+                }
+            }
+            
+            // Search filter
+            if (searchValue && !title.includes(searchValue)) {
+                showRow = false;
+            }
+            
+            row.style.display = showRow ? '' : 'none';
+        }
+    }
+    
+    // Add event listeners
+    statusFilter.addEventListener('change', filterTable);
+    priorityFilter.addEventListener('change', filterTable);
+    assigneeFilter.addEventListener('change', filterTable);
+    searchFilter.addEventListener('input', filterTable);
+});
+
+// Delete confirmation
+function confirmDelete(itemId, itemTitle) {
+    document.getElementById('deleteItemTitle').textContent = itemTitle;
+    document.getElementById('deleteForm').action = `/delete-action-item/${itemId}`;
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+</script>
+{% endblock %}
