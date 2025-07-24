@@ -1,0 +1,20 @@
+{
+    "python.defaultInterpreterPath": "./venv/bin/python",
+    "python.envFile": "${workspaceFolder}/.env",
+    "python.linting.enabled": true,
+    "python.linting.pylintEnabled": false,
+    "python.linting.flake8Enabled": true,
+    "python.formatting.provider": "black",
+    "python.testing.pytestEnabled": true,
+    "python.testing.unittestEnabled": false,
+    "files.associations": {
+        "*.html": "html",
+        "*.sql": "sql"
+    },
+    "emmet.includeLanguages": {
+        "jinja-html": "html"
+    },
+    "html.suggest.html5": true,
+    "css.validate": true,
+    "javascript.validate.enable": true
+}
